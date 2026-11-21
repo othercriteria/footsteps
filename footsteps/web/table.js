@@ -10,6 +10,12 @@ const point = p => "(" + p.join(", ") + ")";
 const phases = {place: "Place a tile", discard: "Return a tile", propose: "Propose movement",
   move_vote: "Movement vote", nominate: "Nominate a player", eliminate_vote: "Elimination vote"};
 let stamp, logLength = -1, sequence = 0, posting = false;
+let choiceError = "", connectionError = "";
+
+function showErrors() {
+  const message = [choiceError, connectionError].filter(Boolean).join(" · ");
+  if (byId("error").textContent !== message) byId("error").textContent = message;
+}
 
 function tile(value, center, classes = "") {
   const box = node("span");
@@ -197,14 +203,20 @@ async function send(path, body) {
   posting = true;
   try {
     await request(path, body);
-    byId("error").textContent = "";
-  } catch (e) { byId("error").textContent = e.message; }
+    choiceError = connectionError = "";
+    showErrors();
+  } catch (e) { choiceError = e.message; showErrors(); }
   finally { posting = false; }
 }
 
 async function poll() {
-  try { if (!posting) await request("/state"); }
-  catch (e) { byId("error").textContent = e.message; }
+  try {
+    if (!posting) {
+      await request("/state");
+      connectionError = "";
+      showErrors();
+    }
+  } catch (e) { connectionError = e.message; showErrors(); }
   setTimeout(poll, 700);
 }
 if (token) poll();
