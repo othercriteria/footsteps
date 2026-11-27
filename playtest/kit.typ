@@ -8,36 +8,65 @@
 #let size = 32mm
 #let heading(body) = text(size: 22pt, weight: "bold", body)
 #let subtitle(body) = text(size: 13pt, weight: "bold", body)
-#let square(body) = block(width: size, height: size, stroke: edge, inset: 0pt, body)
-#let cell(face, name: none) = square({
-  let ins = calc.rem(face, 16)
-  let outs = calc.div-euclid(face, 16)
-  let locations = (center + top, right + horizon, center + bottom, left + horizon)
-  let inward = ("↓", "←", "↑", "→")
-  let outward = ("↑", "→", "↓", "←")
-  let both = ("↕", "↔", "↕", "↔")
+// Draw the north edge once. Turning the whole layer keeps the two lanes
+// registered on opposite sides of every seam, including after a hand rotation.
+#let ports(sends, accepts, d) = place(top + left, rotate(90deg * d,
+  box(width: size, height: size, {
+    if sends {
+      place(top + left, dx: size / 2 - 4mm - 1.1mm,
+        rect(width: 2.2mm, height: 4.5mm, fill: black, stroke: none))
+    }
+    if accepts {
+      place(top + left, dx: size / 2 + 4mm - 2.6mm,
+        polygon((0mm, 0mm), (5.2mm, 0mm), (2.6mm, 3.8mm), fill: black, stroke: none))
+    }
+  })
+))
+#let cell(face, name: none, show-id: true) = block(width: size, height: size, stroke: .45pt + luma(130), inset: 0pt, {
+  let pairs = ()
   for d in range(4) {
     let bit = calc.pow(2, d)
-    let accepts = calc.odd(calc.div-euclid(ins, bit))
-    let sends = calc.odd(calc.div-euclid(outs, bit))
-    let arrow = if accepts and sends { both.at(d) } else if accepts { inward.at(d) } else if sends { outward.at(d) } else { "" }
-    place(locations.at(d), pad(1.2mm, text(font: "DejaVu Sans", size: 17pt, arrow)))
+    let sends = calc.odd(calc.div-euclid(face, 16 * bit))
+    let accepts = calc.odd(calc.div-euclid(face, bit))
+    pairs.push(str(int(sends)) + str(int(accepts)))
+    ports(sends, accepts, d)
   }
-  place(center + horizon, text(weight: "bold", size: 12pt, if name == none { str(face) } else { name }))
+  if name != none {
+    place(center + horizon, text(weight: "bold", size: 12pt, name))
+  } else if show-id {
+    place(top + left, dx: 5.4mm, dy: 5.6mm,
+      text(font: "DejaVu Sans", size: 7pt, fill: luma(105), weight: "bold", str(face)))
+    place(top + left, dx: 5.4mm, dy: 8.8mm,
+      text(font: "DejaVu Sans Mono", size: 6pt, fill: luma(105), pairs.join(" ")))
+  }
 })
+// Show only the touching edges, at the same physical scale as the cut tiles.
+#let seam(a, b, caption) = stack(dir: ttb, spacing: 1mm,
+  box(width: 30mm, height: 15mm, clip: true,
+    place(top + left, dx: 15mm - size, dy: (15mm - size) / 2,
+      grid(columns: (size, size), gutter: 0pt, cell(a, show-id: false), cell(b, show-id: false)))),
+  align(center, text(font: "DejaVu Sans", size: 8pt, caption)))
 #let card(w, h, body) = block(width: w, height: h, stroke: edge, inset: 2mm, align(center + horizon, body))
 #let four = range(4)
 
+#[
+#set block(spacing: 1.4mm)
 #heading[Floor tiles]
-#par[Print all three pages single-sided at *100% / actual size* on Letter or A4. Use opaque stock or glue to identical opaque backing before cutting. Each square below should measure 32 mm on a side.]
+#par[Print single-sided at *actual size* on Letter or A4. Check a square measures 32 mm. Use opaque stock or mount on identical opaque backs before cutting.]
+#v(1mm)
 #align(center, grid(columns: (size,) * 4, gutter: 0pt, ..faces.map(f => cell(f))))
-#v(3mm)
+#v(1mm)
 #align(center, grid(columns: (size,) * 4, gutter: 0pt,
   cell(255, name: "START"), cell(255, name: "EXIT"),
   card(size, size, circle(radius: 6mm, stroke: edge, inset: 0pt, align(center + horizon, [●]))), card(size, size, [N ↑ \ Table north])))
-#v(2mm)
-#par[*Bag only the first sixteen tiles.* Keep the four pieces on the bottom row separate. Cut out the small round marker or use a coin. The north card stays beside the floor.]
-#par[An arrow pointing into a tile permits entry from that edge. One pointing out permits departure. A double arrow permits both. A blank edge permits neither. Check both touching edges before proposing a step.]
+#v(1mm)
+#par[*Bag only the upper sixteen tiles.* Use the round marker or a coin. Keep the north card beside the floor.]
+#par[*Follow a complete arrow.* Step from a bar on one tile into a triangle on the next.]
+#align(center, grid(columns: (34mm,) * 3, align: center, column-gutter: 4mm,
+  seam(45, 107, [Right only]), seam(107, 188, [Both ways]), seam(107, 16, [Blocked])))
+#v(1mm)
+#par[#text(size: 9pt)[The small ID and four bit pairs record the tile. Read clockwise from printed top, out then in. 1 = open, 0 = closed.]]
+]
 #pagebreak()
 
 #heading[Seats, roles and ballots]
