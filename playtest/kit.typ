@@ -23,21 +23,24 @@
   })
 ))
 #let cell(face, name: none, show-id: true) = block(width: size, height: size, stroke: .45pt + luma(130), inset: 0pt, {
-  let pairs = ()
   for d in range(4) {
     let bit = calc.pow(2, d)
     let sends = calc.odd(calc.div-euclid(face, 16 * bit))
     let accepts = calc.odd(calc.div-euclid(face, bit))
-    pairs.push(str(int(sends)) + str(int(accepts)))
     ports(sends, accepts, d)
   }
   if name != none {
     place(center + horizon, text(weight: "bold", size: 12pt, name))
   } else if show-id {
-    place(top + left, dx: 5.4mm, dy: 5.6mm,
-      text(font: "DejaVu Sans", size: 7pt, fill: luma(105), weight: "bold", str(face)))
-    place(top + left, dx: 5.4mm, dy: 8.8mm,
-      text(font: "DejaVu Sans Mono", size: 6pt, fill: luma(105), pairs.join(" ")))
+    let bits = ("00000000" + str(face, base: 2)).slice(-8)
+    place(top + left, dx: 5.4mm, dy: 5.6mm, {
+      set text(font: "DejaVu Sans Mono", size: 6.5pt, fill: luma(105))
+      grid(columns: (5mm, 2.4mm, 2.4mm, 2.4mm, 2.4mm), row-gutter: .4mm,
+        align: (left, center, center, center, center),
+        text(weight: "bold", str(face)), ..("W", "S", "E", "N"),
+        [OUT], ..bits.slice(0, 4).clusters(),
+        [IN], ..bits.slice(4).clusters())
+    })
   }
 })
 // Show only the touching edges, at the same physical scale as the cut tiles.
@@ -65,7 +68,7 @@
 #align(center, grid(columns: (34mm,) * 3, align: center, column-gutter: 4mm,
   seam(45, 107, [Right only]), seam(107, 188, [Both ways]), seam(107, 16, [Blocked])))
 #v(1mm)
-#par[#text(size: 9pt)[The small ID and four bit pairs record the tile. Read clockwise from printed top, out then in. 1 = open, 0 = closed.]]
+#par[#text(size: 9pt)[Read OUT then IN for the binary ID. Read down W, S, E or N for one printed edge. 1 = open, 0 = closed.]]
 ]
 #pagebreak()
 
